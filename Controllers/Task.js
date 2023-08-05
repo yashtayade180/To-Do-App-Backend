@@ -15,8 +15,12 @@ export const CreateTask = async (req, res, next) => {
 export const UpdateTask = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const task = await Task.findByIdAndUpdate( id , {...req.body}, {new: true})
-    return res.status(201).json({task})
+    const task = await Task.findByIdAndUpdate(
+      id,
+      { ...req.body },
+      { new: true }
+    );
+    return res.status(201).json({ task });
   } catch (err) {
     next(err);
   }
@@ -24,9 +28,28 @@ export const UpdateTask = async (req, res, next) => {
 
 export const getTask = async (req, res, next) => {
   try {
-    const {id} = req.params
-    const task = await Task.findById(id)
-    return res.status(201).json({task})
+    const { id } = req.params;
+    const task = await Task.findById(id);
+    return res.status(201).json({ task });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteTask = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    // Find the task by ID
+    const task = await Task.findById(id);
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    // Delete the task
+    await Task.findByIdAndDelete(id);
+
+    return res.status(200).json({ message: "Task deleted successfully" });
   } catch (err) {
     next(err);
   }
@@ -34,29 +57,33 @@ export const getTask = async (req, res, next) => {
 
 export const getTasks = async (req, res, next) => {
   try {
-    const type =  req.query?.type
-    const day = req.query?.day
-    const {id} = req.user
-    var min , max
-    if(day === 'today') {
-      min = dayjs().format('YYYY-MM-DD')
-      max = dayjs().format('YYYY-MM-DD')
+    const type = req.query?.type;
+    const day = req.query?.day;
+    const { id } = req.user;
+    var min, max;
+    if (day === "today") {
+      min = dayjs().format("YYYY-MM-DD");
+      max = dayjs().format("YYYY-MM-DD");
+    } else if (day === "seven") {
+      min = dayjs().subtract(7, "day").format("YYYY-MM-DD");
+      max = dayjs().format("YYYY-MM-DD");
+    } else if (day === "thirty") {
+      min = dayjs().subtract(30, "day").format("YYYY-MM-DD");
+      max = dayjs().format("YYYY-MM-DD");
     }
-    else if(day === 'seven') {
-      min = dayjs().subtract(7, 'day').format('YYYY-MM-DD')
-      max = dayjs().format('YYYY-MM-DD')
+    if (type) {
+      var tasks = await Task.find({
+        userId: id,
+        type,
+        ...(day && { date: { $lte: new Date(max), $gte: new Date(min) } }),
+      });
+    } else {
+      var tasks = await Task.find({
+        userId: id,
+        ...(day && { date: { $lte: new Date(max), $gte: new Date(min) } }),
+      });
     }
-    else if(day === 'thirty') {
-      min = dayjs().subtract(30, 'day').format('YYYY-MM-DD')
-      max = dayjs().format('YYYY-MM-DD')
-    }
-    if(type) {
-     var tasks = await Task.find({userId: id , type , ...(day && {date: {$lte : new Date(max), $gte: new Date(min)} })})
-    }
-    else {
-    var tasks = await Task.find({userId: id , ...(day && {date: {$lte : new Date(max), $gte: new Date(min)} }) })
-    }
-    return res.status(201).json({tasks})
+    return res.status(201).json({ tasks });
   } catch (err) {
     next(err);
   }
